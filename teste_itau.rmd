@@ -1,0 +1,254 @@
+---
+title: "Teste de Data Science"
+output: html_notebook
+---
+
+## Preambulo
+
+Teste de data science lançado pelo banco Itaú como parte do processo de seleção. Não há nenhuma limitação de linguagem,
+e somente os resultados necessitavam ser enviados. Os dados utilizados neste teste estão no diretório datasets.
+
+Este trabalho está escrito em R, usando RMarkdown, e a api python scikit-learn, importada para R utilizando a biblioteca reticulate.
+
+```{r}
+require(data.table)
+require(reticulate)
+random = import('random')
+random$seed(as.numeric(42))
+set.seed(42)
+
+skmetrics = import("sklearn.metrics")
+```
+
+## Questão 1
+
+Qual o numero de clusters mais adequado para os dados em agrupamento_Q1.csv, e quais os centroides desses clusters, usando os centroides em agrup_centroides_Q1.csv e KMeans?
+
+```{r}
+q1_cntr = fread('datasets/agrup_centroides_Q1.csv',
+                col.names = c("id","x1","x2","x3","x4"),
+                colClasses = c("factor","numeric","numeric","numeric","numeric")
+              )
+q1_points = fread('datasets/agrupamento_Q1.csv',
+                col.names = c("x1","x2","x3","x4"),,
+                colClasses = c("numeric","numeric","numeric","numeric")
+                )
+q1_cntr$id = NULL
+```
+
+```{r}
+silhouettes = 1:12
+silhouettes[1] = -Inf
+centers = list()
+
+for(n in 2:12){
+  clt = import('sklearn.cluster')
+  y = clt$KMeans(n_clusters = as.integer(n), max_iter = as.integer(10), init = q1_cntr[1:n], random_state = as.integer(42))
+  clusters = y$fit_predict(q1_points)
+  if(n==5){ print(y$cluster_centers_)}
+  #clusters = as.factor(apply(distances, 1, which.min))
+
+  scores = skmetrics$silhouette_score(X=q1_points, labels=clusters)
+  silhouettes[n] = scores
+}
+print(silhouettes)
+```
+
+Resposta escolhida a partir do score médio da metrica de silhouette para cada passo. k=5 teve o melhor resultado com 0.487 como valor de silhouette.
+
+O posicionamento dos centróides para esse caso é:
+[1,]  1.00809727 0.0056562568 -0.006058822  0.029329272
+[2,]  0.99556174 0.0006261532 -0.007804098  1.001521200
+[3,]  0.99595270 0.0064627322  0.999718008  0.003147213
+[4,] -0.03471473 0.0163162909  0.010426475 -0.016240750
+[5,]  0.99074009 0.9930477735  0.969936615 -0.004064823
+
+
+## Questão 3
+
+Use naive-bayes com validação holdout, para descobrir a acuracia media dos conjuntos de treino e validação nos dados no arquivo classificacao_Q3.csv. O tamanho do conjunto de validação é 500.
+
+```{r}
+q3_clf = fread('datasets/classificacao_Q3.csv',
+                col.names = c("genero","idade","escolaridade","profissao","target"),
+                colClasses = c("factor","factor","factor","factor","factor")
+              )
+q3_clf$genero = as.numeric(q3_clf$genero)
+q3_clf$idade = as.numeric(q3_clf$idade)
+q3_clf$escolaridade = as.numeric(q3_clf$escolaridade)
+q3_clf$profissao = as.numeric(q3_clf$profissao)
+
+q3_X = q3_clf
+q3_Y = q3_clf$target
+treino = 1:500
+val = 501:nrow(q3_clf)
+
+q3_X$target = NULL
+
+```
+
+```{r}
+nb = import('sklearn.naive_bayes')
+
+clf = nb$GaussianNB()
+clf = clf$fit(q3_X[treino],q3_Y[treino])
+
+clf$score(q3_X[treino],q3_Y[treino])
+clf$score(q3_X[val],q3_Y[val])
+
+```
+A partir do citado no enunciado, utlizamos a validação holdout, dividindo o conjunto em conjuntos de treino e validação independentes, no caso, a proporção pedida foi de 50/50.
+Criamos um conjunto de treinamento, com 500 entradas, que nos deu acurácia de treinamento (utilizando os Y de treinamento para o cálculo da métrica) igual a 0.792.
+
+Também criamos um conjunto de validação, também com 500 entradas, que nos deu acurácia média igual a 0.762, prevendo valores a partir do modelo treinado pelo conjunto de treinamento descrito anteriormente.
+
+
+## Questão 4
+
+Usando 10-fold cross validation, use um modelo KNN (k=15, distancia euclidiana), para descobrir a acurácia média de validação dos dados em classificacao_Q4.csv.
+
+```{r}
+q4_clf = fread('datasets/classificacao_Q4.csv')
+q4_clf$target = as.factor(q4_clf$target)
+q4_Y = q4_clf$target
+
+q4_X = q4_clf
+q4_X$target = NULL
+
+```
+
+```{r}
+knn = import('sklearn.neighbors')
+model_select = import('sklearn.model_selection')
+kfold = model_select$KFold(n_splits=as.integer(10), random_state=as.integer(42), shuffle=FALSE)
+split = kfold$split(q4_clf)
+accuracies = 1:10
+for(i in 1:10){
+  splits = iter_next(split)
+  treino = unlist(splits[1])+1
+  val = unlist(splits[2])+1
+  clf = knn$KNeighborsClassifier(n_neighbors = as.integer(15), p = as.integer(2))
+  clf = clf$fit(q4_X[treino], q4_Y[treino])
+  accuracies[i] = clf$score(q4_X[val], q4_Y[val])
+}
+print(accuracies)
+mean(accuracies)
+sd(accuracies)
+```
+
+Seguindo o enunciado, a base foi dividida de acordo com 10-fold cross-validation, gerando conjuntos de validação com 150 linhas, e de treino com 1350 linhas.
+
+As acurácias para cada um dos passos da validação cruzada estão abaixo
+ 0.686, 0.660, 0.620, 0.653, 0.646, 0.666, 0.646, 0.653,
+ 0.680, 0.606
+Finalmente a média dessas acurácias foi de 0.652, com um desvio padrão de 0.024
+
+
+## Questão 6
+
+Usando cross-validation leave-one-out e um algoritimo de regressão linear Ridge, com regularização R2 e parametro de regularização igual a 1.7, dê o RMSE médio de treino e validação para os dados no arquivo regressao_q6.csv
+
+```{r}
+q6_reg = fread('datasets/regressao_q6.csv')
+q6_Y = q6_reg$target
+
+q6_X = q6_reg
+q6_X$target = NULL
+
+
+```
+
+```{r}
+lr = import('sklearn.linear_model')
+model_select = import('sklearn.model_selection')
+loo = model_select$LeaveOneOut()
+split = loo$split(q6_reg)
+
+scores_treino = 1:nrow(q6_reg)
+scores_val = 1:nrow(q6_reg)
+
+for(i in 1:nrow(q6_reg)){
+  splits = iter_next(split)
+  treino = unlist(splits[1])+1
+  val = unlist(splits[2])+1
+
+  clf = lr$Ridge(alpha = as.numeric(1.7))
+  clf = clf$fit(q6_X[treino], q6_Y[treino])
+
+  tr_pred_Y = clf$predict(q6_X[treino])
+  scores_treino[i] = skmetrics$mean_squared_error(q6_Y[treino], tr_pred_Y)
+
+  pred_Y = clf$predict(q6_X[val])
+  scores_val[i] = skmetrics$mean_squared_error(list(q6_Y[val]), list(pred_Y))
+}
+
+summary(sqrt(scores_treino))
+sd(sqrt(scores_treino))
+summary(sqrt(scores_val))
+sd(sqrt(scores_val))
+
+
+```
+De acordo com o enunciado, dividimos o dados usando a validação Leave-one-out, onde somente uma entrada é validada por vez.
+
+Foi usado o algoritimo de regressão linear Ridge, com um alpha=1.7. O RMSE médio para o conjunto de treinamento foi  27.43 (std.dev=0.017), enquanto o RMSE médio para o conjunto de validação foi 22.05 (std.dev=16.76).
+
+Treino:
+Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
+  27.31   27.43   27.44   27.43   27.44   27.44
+Validação:
+  Min.    1st Qu.   Median  Mean    3rd Qu.   Max.
+ 0.05314  8.84139 19.01363 22.05880 31.83349 90.76112
+
+## Questão 7
+
+Usando uma árvore de regressão sem podas, com quebras baseadas no MSE e 10-fold cross validation, dê os MAE médios para treino e validação para os dados em regressao_q7.csv.
+
+```{r}
+q7_reg = fread('datasets/regressao_q7.csv')
+
+q7_Y = q7_reg$target
+
+q7_X = q7_reg
+q7_X$target = NULL
+
+```
+
+
+```{r}
+knn = import('sklearn.tree')
+model_select = import('sklearn.model_selection')
+kfold = model_select$KFold(n_splits=as.integer(10), random_state=as.integer(42), shuffle=FALSE)
+split = kfold$split(q7_reg)
+
+scores_treino = 1:10
+scores_val = 1:10
+for(i in 1:10) {
+  splits = iter_next(split)
+  treino = unlist(splits[1])+1
+  val = unlist(splits[2])+1
+
+  clf = knn$DecisionTreeRegressor(criterion = 'mse', random_state = as.integer(42))
+  clf = clf$fit(q7_X[treino], q7_Y[treino])
+  tr_pred_Y = clf$predict(q7_X[treino])
+  scores_treino[i] = skmetrics$mean_absolute_error(q7_Y[treino], tr_pred_Y)
+
+  pred_Y = clf$predict(q7_X[val])
+  scores_val[i] = skmetrics$mean_absolute_error(q7_Y[val], pred_Y)
+}
+```
+
+```{r}
+
+summary(scores_treino)
+sd(scores_treino)
+
+summary(scores_val)
+sd(scores_val)
+
+```
+
+Como expressado no enunciado, construímos uma arvore de regressão sem podas, e com quebras baseadas no MSE, usando 10-fold cross-validation como o método de validação.
+
+Nisso, chegamos em um MAE médio de 6.898e-08 (std.dev=1.45e-07) para os dados de treino, e um MAE médio de 52.41 (std.dev=2.525) para os dados de validação. Pela diferença do MAE médio de treino para o MAE médio de validação, fica claro que essa árvore está sofrendo de overfitting, provavelmente devido a falta podas nesta.
+

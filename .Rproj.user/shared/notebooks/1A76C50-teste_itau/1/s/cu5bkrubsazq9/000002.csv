@@ -1,0 +1,5 @@
+"0","q4_clf = fread('datasets/classificacao_Q4.csv')"
+"0","q4_clf$target = as.factor(q4_clf$target)"
+"0","q4_Y = q4_clf$target"
+"0","q4_X = q4_clf"
+"0","q4_X$target = NULL"

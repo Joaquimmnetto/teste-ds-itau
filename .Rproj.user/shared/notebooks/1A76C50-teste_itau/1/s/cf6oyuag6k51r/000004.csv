@@ -1,0 +1,4 @@
+"0","q6_reg = fread('datasets/regressao_q6.csv')"
+"0","q6_Y = q6_reg$target"
+"0","q6_X = q6_reg"
+"0","q6_X$target = NULL"

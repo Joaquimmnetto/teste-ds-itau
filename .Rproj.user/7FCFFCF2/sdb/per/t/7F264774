@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "require(data.table)\n\nq1.cntr = fread('datasets/agrup_centroides_Q1.csv', \n                col.names = c(\"id\",\"x1\",\"x2\",\"x3\",\"x4\"),\n                colClasses = c(\"factor\",\"numeric\",\"numeric\",\"numeric\",\"numeric\")\n              )\nq1.points = fread('datasets/agrupamento_Q1.csv',\n                col.names = c(\"x1\",\"x2\",\"x3\",\"x4\"),\n                colClasses = c(\"numeric\",\"numeric\",\"numeric\",\"numeric\")\n                )\n                \n\n",
+    "created" : 1531170608885.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "370927269",
+    "id" : "7F264774",
+    "lastKnownWriteTime" : 1531170905,
+    "last_content_update" : 1531170905226,
+    "path" : "C:/Users/KithLenovo/Desktop/teste_itau/teste_itau.R",
+    "project_path" : "teste_itau.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
